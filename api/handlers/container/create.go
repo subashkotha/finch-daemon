@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
 	gocni "github.com/containerd/go-cni"
@@ -104,6 +105,17 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if req.Labels != nil {
 		for key, val := range req.Labels {
 			labels = append(labels, fmt.Sprintf("%s=%s", key, val))
+		}
+	}
+
+	// Process health check configuration
+	if req.Healthcheck != nil {
+		healthCheckJSON, err := processHealthCheck(req.Healthcheck)
+		if err != nil {
+			h.logger.Warnf("Failed to marshal health check config: %v", err)
+		} else {
+			// Add health check config as a label
+			labels = append(labels, fmt.Sprintf("finch.healthcheck=%s", healthCheckJSON))
 		}
 	}
 
@@ -324,3 +336,41 @@ func translatePortMappings(portMappings nat.PortMap) ([]gocni.PortMapping, error
 	}
 	return ports, nil
 }
+
+// processHealthCheck processes health check configuration from the request
+// and returns a serialized label value with default values applied where needed
+func processHealthCheck(healthCfg *types.HealthConfig) (string, error) {
+	if healthCfg == nil || len(healthCfg.Test) == 0 {
+		return "", nil
+	}
+
+	// Apply default values if not set
+	if healthCfg.Interval == 0 {
+		healthCfg.Interval = defaultInterval
+	}
+	if healthCfg.Timeout == 0 {
+		healthCfg.Timeout = defaultTimeout
+	}
+	if healthCfg.StartPeriod == 0 {
+		healthCfg.StartPeriod = defaultStartPeriod
+	}
+	if healthCfg.Retries == 0 {
+		healthCfg.Retries = defaultRetries
+	}
+
+	// Serialize to JSON for label value
+	labelValue, err := json.Marshal(healthCfg)
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize health check config: %w", err)
+	}
+
+	return string(labelValue), nil
+}
+
+const (
+	healthCheckLabel   = "finch/healthcheck"
+	defaultInterval    = 30 * time.Second
+	defaultTimeout     = 30 * time.Second
+	defaultStartPeriod = 0 * time.Second
+	defaultRetries     = 3
+)

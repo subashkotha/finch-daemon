@@ -12,6 +12,7 @@ import (
 	dockertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
+	dockerspec "github.com/moby/docker-image-spec/specs-go/v1"
 )
 
 // AttachOptions defines the available options for the container attach call.
@@ -38,9 +39,9 @@ type ContainerConfig struct {
 	Tty          bool        // Attach standard streams to a tty, including stdin if it is not closed.
 	// TODO: OpenStdin    bool        // Open stdin
 	// TODO: StdinOnce    bool        // If true, close stdin after the 1 attached client disconnects.
-	Env []string `json:",omitempty"` // List of environment variable to set in the container
-	Cmd []string `json:",omitempty"` // Command to run when starting the container
-	// TODO Healthcheck     *HealthConfig       `json:",omitempty"` // Healthcheck describes how to check the container is healthy
+	Env         []string      `json:",omitempty"` // List of environment variable to set in the container
+	Cmd         []string      `json:",omitempty"` // Command to run when starting the container
+	Healthcheck *HealthConfig `json:",omitempty"` // Healthcheck describes how to check the container is healthy
 	// TODO: ArgsEscaped     bool                `json:",omitempty"` // True if command is already escaped (meaning treat as a command line) (Windows specific).
 	Image      string              // Name of the image as it was passed by the operator (e.g. could be symbolic)
 	Volumes    map[string]struct{} `json:",omitempty"` // List of volumes (mounts) used for the container
@@ -262,5 +263,8 @@ type StatsJSON struct {
 	// Networks request version >=1.21
 	Networks map[string]dockertypes.NetworkStats `json:"networks,omitempty"`
 }
+
+// HealthConfig holds configuration settings for the HEALTHCHECK feature.
+type HealthConfig = dockerspec.HealthcheckConfig
 
 type Ulimit = units.Ulimit
