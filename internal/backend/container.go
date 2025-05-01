@@ -39,6 +39,8 @@ type NerdctlContainerSvc interface {
 	ContainerWait(ctx context.Context, cid string, options types.ContainerWaitOptions) error
 	PauseContainer(ctx context.Context, cid string, options types.ContainerPauseOptions) error
 	UnpauseContainer(ctx context.Context, cid string, options types.ContainerUnpauseOptions) error
+	AttachContainer(ctx context.Context, cid string, options types.ContainerAttachOptions) error
+	Logs(ctx context.Context, cid string, options types.ContainerLogsOptions) error
 
 	// Mocked functions for container attach
 	GetDataStore() (string, error)
@@ -138,6 +140,14 @@ func (w *NerdctlWrapper) PauseContainer(ctx context.Context, cid string, options
 
 func (w *NerdctlWrapper) UnpauseContainer(ctx context.Context, cid string, options types.ContainerUnpauseOptions) error {
 	return container.Unpause(ctx, w.clientWrapper.client, []string{cid}, options)
+}
+
+func (w *NerdctlWrapper) AttachContainer(ctx context.Context, cid string, options types.ContainerAttachOptions) error {
+	return container.Attach(ctx, w.clientWrapper.client, cid, options)
+}
+
+func (w *NerdctlWrapper) Logs(ctx context.Context, cid string, options types.ContainerLogsOptions) error {
+	return container.Logs(ctx, w.clientWrapper.client, cid, options)
 }
 
 func (w *NerdctlWrapper) GetNerdctlExe() (string, error) {

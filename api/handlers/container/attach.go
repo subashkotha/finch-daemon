@@ -55,11 +55,11 @@ func (h *handler) attach(w http.ResponseWriter, r *http.Request) {
 	})
 
 	_, upgrade := r.Header["Upgrade"]
-	contentType, successResponse := checkUpgradeStatus(r.Context(), upgrade)
+	_, successResponse := checkUpgradeStatus(r.Context(), upgrade)
 
 	// define setupStreams to pass the connection, the stopchannel, and the success response
-	setupStreams := func() (io.Writer, io.Writer, chan os.Signal, func(), error) {
-		return conn, conn, stopChannel, func() {
+	setupStreams := func() (io.Reader, io.Writer, io.Writer, chan os.Signal, func(), error) {
+		return conn, conn, conn, stopChannel, func() {
 			fmt.Fprint(conn, successResponse)
 		}, nil
 	}
@@ -71,26 +71,18 @@ func (h *handler) attach(w http.ResponseWriter, r *http.Request) {
 		UseStderr:  httputils.BoolValue(r, "stderr"),
 		Logs:       httputils.BoolValue(r, "logs"),
 		Stream:     httputils.BoolValue(r, "stream"),
-		// TODO: implement DetachKeys now that David's nerdctl detachkeys is implemented
-		// DetachKeys: r.URL.Query().Get("detachKeys"),
-		// TODO: note that MuxStreams should be used in both in checkUpgradeStatus as well as
-		// service.Attach, but since we always start containers in detached mode with tty=false,
-		// whether the stream and the output will be multiplexed will always be true
+		DetachKeys: r.URL.Query().Get("detachKeys"),
 		MuxStreams: true,
 	}
 
 	err = h.service.Attach(r.Context(), mux.Vars(r)["id"], opts)
 	if err != nil {
-		statusCode := http.StatusInternalServerError
 		if errdefs.IsNotFound(err) {
-			statusCode = http.StatusNotFound
+			response.JSON(w, http.StatusNotFound, response.NewError(err))
+			return
 		}
-		statusText := http.StatusText(statusCode)
-		fmt.Fprintf(conn, "HTTP/1.1 %d %s\r\n"+
-			"Content-Type: %s\r\n\r\n%s\r\n", statusCode, statusText, contentType, err.Error())
-	}
-	if conn != nil {
-		httputils.CloseStreams(conn)
+		response.JSON(w, http.StatusInternalServerError, response.NewError(err))
+		return
 	}
 }
 
@@ -111,8 +103,6 @@ func checkUpgradeStatus(ctx context.Context, upgrade bool) (string, string) {
 
 // checkConnection monitors the hijacked connection and checks whether the connection is closed,
 // running a closer function when it is closed.
-//
-// TODO: Refactor when we implement stdin.
 func checkConnection(conn net.Conn, closer func()) {
 	one := make([]byte, 1)
 	if _, err := conn.Read(one); err == io.EOF {

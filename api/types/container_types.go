@@ -16,13 +16,13 @@ import (
 
 // AttachOptions defines the available options for the container attach call.
 type AttachOptions struct {
-	GetStreams func() (io.Writer, io.Writer, chan os.Signal, func(), error)
+	GetStreams func() (io.Reader, io.Writer, io.Writer, chan os.Signal, func(), error)
 	UseStdin   bool
 	UseStdout  bool
 	UseStderr  bool
 	Logs       bool
 	Stream     bool
-	// TODO: DetachKeys string
+	DetachKeys string
 	MuxStreams bool
 }
 

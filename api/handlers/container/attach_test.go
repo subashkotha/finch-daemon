@@ -109,16 +109,17 @@ var _ = Describe("Container Attach API", func() {
 				"id": cid,
 			}
 			expectedOpts := &types.AttachOptions{
-				GetStreams: func() (io.Writer, io.Writer, chan os.Signal, func(), error) {
+				GetStreams: func() (io.Reader, io.Writer, io.Writer, chan os.Signal, func(), error) {
 					conn, _, err := rr.Hijack()
 					Expect(err).Should(BeNil())
-					return conn, conn, nil, nil, nil
+					return conn, conn, conn, nil, nil, nil
 				},
 				UseStdin:   true,
 				UseStdout:  true,
 				UseStderr:  true,
 				Logs:       true,
 				Stream:     true,
+				DetachKeys: "ctrl-p,ctrl-q",
 				MuxStreams: true,
 			}
 			service.EXPECT().Attach(gomock.Any(), cid, attachOptsEqualTo(expectedOpts)).Return(nil)
@@ -127,7 +128,8 @@ var _ = Describe("Container Attach API", func() {
 				"stdout=1&"+
 				"stderr=1&"+
 				"logs=1&"+
-				"stream=1", nil)
+				"stream=1&"+
+				"detachKeys=ctrl-p,ctrl-q", nil)
 			req = mux.SetURLVars(req, vars)
 
 			h.attach(rr, req)
@@ -263,8 +265,11 @@ func attachOptsEqualTo(object *types.AttachOptions) *attachOptsMatcher {
 func (e *attachOptsMatcher) Matches(x interface{}) bool {
 	y := x.(*types.AttachOptions)
 
-	gotStdout, gotStderr, _, _, gotErr := y.GetStreams()
-	wantStdout, wantStderr, _, _, wantErr := e.obj.GetStreams()
+	gotStdin, gotStdout, gotStderr, _, _, gotErr := y.GetStreams()
+	wantStdin, wantStdout, wantStderr, _, _, wantErr := e.obj.GetStreams()
+	if wantStdin != gotStdin {
+		e.mismatches = append(e.mismatches, "GetStreams() - stdin")
+	}
 	if wantStdout != gotStdout {
 		e.mismatches = append(e.mismatches, "GetStreams() - stdout")
 	}
@@ -288,6 +293,9 @@ func (e *attachOptsMatcher) Matches(x interface{}) bool {
 	}
 	if e.obj.Stream != y.Stream {
 		e.mismatches = append(e.mismatches, "Stream")
+	}
+	if e.obj.DetachKeys != y.DetachKeys {
+		e.mismatches = append(e.mismatches, "DetachKeys")
 	}
 
 	if len(e.mismatches) > 0 {
