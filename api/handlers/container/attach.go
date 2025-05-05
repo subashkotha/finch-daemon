@@ -55,7 +55,7 @@ func (h *handler) attach(w http.ResponseWriter, r *http.Request) {
 	})
 
 	_, upgrade := r.Header["Upgrade"]
-	_, successResponse := checkUpgradeStatus(r.Context(), upgrade)
+	contentType, successResponse := checkUpgradeStatus(r.Context(), upgrade)
 
 	// define setupStreams to pass the connection, the stopchannel, and the success response
 	setupStreams := func() (io.Reader, io.Writer, io.Writer, chan os.Signal, func(), error) {
@@ -77,12 +77,16 @@ func (h *handler) attach(w http.ResponseWriter, r *http.Request) {
 
 	err = h.service.Attach(r.Context(), mux.Vars(r)["id"], opts)
 	if err != nil {
+		statusCode := http.StatusInternalServerError
 		if errdefs.IsNotFound(err) {
-			response.JSON(w, http.StatusNotFound, response.NewError(err))
-			return
+			statusCode = http.StatusNotFound
 		}
-		response.JSON(w, http.StatusInternalServerError, response.NewError(err))
-		return
+		statusText := http.StatusText(statusCode)
+		fmt.Fprintf(conn, "HTTP/1.1 %d %s\r\n"+
+			"Content-Type: %s\r\n\r\n%s\r\n", statusCode, statusText, contentType, err.Error())
+	}
+	if conn != nil {
+		httputils.CloseStreams(conn)
 	}
 }
 
