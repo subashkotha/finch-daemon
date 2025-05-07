@@ -41,7 +41,7 @@ func (h *handler) start(w http.ResponseWriter, r *http.Request) {
 	options := ncTypes.ContainerStartOptions{
 		GOptions:   globalOpt,
 		Stdout:     devNull,
-		Attach:     false,
+		Attach:     true,
 		DetachKeys: detachKeys,
 	}
 

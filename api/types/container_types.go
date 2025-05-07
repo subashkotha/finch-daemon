@@ -30,10 +30,10 @@ type AttachOptions struct {
 type ContainerConfig struct {
 	Hostname string `json:",omitempty"` // Hostname
 	// TODO: Domainname   string      // Domainname
-	User        string `json:",omitempty"` // User that will run the command(s) inside the container, also support user:group
-	AttachStdin bool   // Attach the standard input, makes possible user interaction
-	// TODO: AttachStdout bool        // Attach the standard output
-	// TODO: AttachStderr bool        // Attach the standard error
+	User         string      `json:",omitempty"` // User that will run the command(s) inside the container, also support user:group
+	AttachStdin  bool        // Attach the standard input, makes possible user interaction
+	AttachStdout bool        // Attach the standard output
+	AttachStderr bool        // Attach the standard error
 	ExposedPorts nat.PortSet `json:",omitempty"` // List of exposed ports
 	Tty          bool        // Attach standard streams to a tty, including stdin if it is not closed.
 	// TODO: OpenStdin    bool        // Open stdin

@@ -37,13 +37,6 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// AttachStdin is currently not supported
-	// TODO: Remove this check when attach supports stdin
-	if req.AttachStdin {
-		response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg("AttachStdin is currently not supported during create"))
-		return
-	}
-
 	// defaults
 	rp := req.HostConfig.RestartPolicy
 	restart := "no" // Docker API default.
@@ -172,12 +165,12 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		GOptions: globalOpt,
 
 		// #region for basic flags
-		Interactive: false,                     // TODO: update this after attach supports STDIN
-		TTY:         false,                     // TODO: update this after attach supports STDIN
-		Detach:      true,                      // TODO: current implementation of create does not support AttachStdin, AttachStdout, and AttachStderr flags
-		Restart:     restart,                   // Restart policy to apply when a container exits.
-		Rm:          req.HostConfig.AutoRemove, // Automatically remove container upon exit.
-		Pull:        "missing",                 // nerdctl default.
+		Interactive: req.AttachStdin,                                            // Enable interactive mode if AttachStdin is true
+		TTY:         req.Tty,                                                    // Enable TTY if requested
+		Detach:      !(req.AttachStdin || req.AttachStdout || req.AttachStderr), // Detach if no attach flags are set
+		Restart:     restart,                                                    // Restart policy to apply when a container exits.
+		Rm:          req.HostConfig.AutoRemove,                                  // Automatically remove container upon exit.
+		Pull:        "missing",                                                  // nerdctl default.
 		StopSignal:  stopSignal,
 		StopTimeout: stopTimeout,
 		CidFile:     req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
