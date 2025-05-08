@@ -37,13 +37,6 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// AttachStdin is currently not supported
-	// TODO: Remove this check when attach supports stdin
-	if req.AttachStdin {
-		response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg("AttachStdin is currently not supported during create"))
-		return
-	}
-
 	// defaults
 	rp := req.HostConfig.RestartPolicy
 	restart := "no" // Docker API default.
@@ -172,9 +165,10 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		GOptions: globalOpt,
 
 		// #region for basic flags
-		Interactive:    false,                     // TODO: update this after attach supports STDIN
-		TTY:            false,                     // TODO: update this after attach supports STDIN
-		Detach:         true,                      // TODO: current implementation of create does not support AttachStdin, AttachStdout, and AttachStderr flags
+		Interactive:    req.AttachStdin,
+		TTY:            req.Tty,
+		Detach:         !(req.AttachStdin || req.AttachStdout || req.AttachStderr),
+		Attach:         getAttachFlags(req),
 		Restart:        restart,                   // Restart policy to apply when a container exits.
 		Rm:             req.HostConfig.AutoRemove, // Automatically remove container upon exit.
 		Pull:           "missing",                 // nerdctl default.
@@ -331,4 +325,18 @@ func translatePortMappings(portMappings nat.PortMap) ([]gocni.PortMapping, error
 		}
 	}
 	return ports, nil
+}
+
+func getAttachFlags(req types.ContainerCreateRequest) []string {
+	var attach []string
+	if req.AttachStdin {
+		attach = append(attach, "stdin")
+	}
+	if req.AttachStdout {
+		attach = append(attach, "stdout")
+	}
+	if req.AttachStderr {
+		attach = append(attach, "stderr")
+	}
+	return attach
 }

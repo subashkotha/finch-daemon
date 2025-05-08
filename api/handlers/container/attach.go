@@ -58,8 +58,8 @@ func (h *handler) attach(w http.ResponseWriter, r *http.Request) {
 	contentType, successResponse := checkUpgradeStatus(r.Context(), upgrade)
 
 	// define setupStreams to pass the connection, the stopchannel, and the success response
-	setupStreams := func() (io.Writer, io.Writer, chan os.Signal, func(), error) {
-		return conn, conn, stopChannel, func() {
+	setupStreams := func() (io.Reader, io.Writer, io.Writer, chan os.Signal, func(), error) {
+		return conn, conn, conn, stopChannel, func() {
 			fmt.Fprint(conn, successResponse)
 		}, nil
 	}
@@ -71,11 +71,7 @@ func (h *handler) attach(w http.ResponseWriter, r *http.Request) {
 		UseStderr:  httputils.BoolValue(r, "stderr"),
 		Logs:       httputils.BoolValue(r, "logs"),
 		Stream:     httputils.BoolValue(r, "stream"),
-		// TODO: implement DetachKeys now that David's nerdctl detachkeys is implemented
-		// DetachKeys: r.URL.Query().Get("detachKeys"),
-		// TODO: note that MuxStreams should be used in both in checkUpgradeStatus as well as
-		// service.Attach, but since we always start containers in detached mode with tty=false,
-		// whether the stream and the output will be multiplexed will always be true
+		DetachKeys: r.URL.Query().Get("detachKeys"),
 		MuxStreams: true,
 	}
 
@@ -111,8 +107,6 @@ func checkUpgradeStatus(ctx context.Context, upgrade bool) (string, string) {
 
 // checkConnection monitors the hijacked connection and checks whether the connection is closed,
 // running a closer function when it is closed.
-//
-// TODO: Refactor when we implement stdin.
 func checkConnection(conn net.Conn, closer func()) {
 	one := make([]byte, 1)
 	if _, err := conn.Read(one); err == io.EOF {

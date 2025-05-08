@@ -16,13 +16,13 @@ import (
 
 // AttachOptions defines the available options for the container attach call.
 type AttachOptions struct {
-	GetStreams func() (io.Writer, io.Writer, chan os.Signal, func(), error)
+	GetStreams func() (io.Reader, io.Writer, io.Writer, chan os.Signal, func(), error)
 	UseStdin   bool
 	UseStdout  bool
 	UseStderr  bool
 	Logs       bool
 	Stream     bool
-	// TODO: DetachKeys string
+	DetachKeys string
 	MuxStreams bool
 }
 
@@ -30,16 +30,16 @@ type AttachOptions struct {
 type ContainerConfig struct {
 	Hostname string `json:",omitempty"` // Hostname
 	// TODO: Domainname   string      // Domainname
-	User        string `json:",omitempty"` // User that will run the command(s) inside the container, also support user:group
-	AttachStdin bool   // Attach the standard input, makes possible user interaction
-	// TODO: AttachStdout bool        // Attach the standard output
-	// TODO: AttachStderr bool        // Attach the standard error
+	User         string      `json:",omitempty"` // User that will run the command(s) inside the container, also support user:group
+	AttachStdin  bool        // Attach the standard input, makes possible user interaction
+	AttachStdout bool        // Attach the standard output
+	AttachStderr bool        // Attach the standard error
 	ExposedPorts nat.PortSet `json:",omitempty"` // List of exposed ports
 	Tty          bool        // Attach standard streams to a tty, including stdin if it is not closed.
-	// TODO: OpenStdin    bool        // Open stdin
-	// TODO: StdinOnce    bool        // If true, close stdin after the 1 attached client disconnects.
-	Env []string `json:",omitempty"` // List of environment variable to set in the container
-	Cmd []string `json:",omitempty"` // Command to run when starting the container
+	OpenStdin    bool        // Open stdin
+	StdinOnce    bool        // If true, close stdin after the 1 attached client disconnects.
+	Env          []string    `json:",omitempty"` // List of environment variable to set in the container
+	Cmd          []string    `json:",omitempty"` // Command to run when starting the container
 	// TODO Healthcheck     *HealthConfig       `json:",omitempty"` // Healthcheck describes how to check the container is healthy
 	// TODO: ArgsEscaped     bool                `json:",omitempty"` // True if command is already escaped (meaning treat as a command line) (Windows specific).
 	Image           string              // Name of the image as it was passed by the operator (e.g. could be symbolic)

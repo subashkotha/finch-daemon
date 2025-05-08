@@ -24,7 +24,7 @@ func (s *service) Logs(ctx context.Context, cid string, opts *types.LogsOptions)
 	s.logger.Infof("getting logs for container: %s", con.ID())
 
 	// set up io streams
-	outStream, errStream, stopChannel, printSuccessResp, err := opts.GetStreams()
+	outStream, errStream, _, printSuccessResp, err := opts.GetStreams()
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,8 @@ func (s *service) Logs(ctx context.Context, cid string, opts *types.LogsOptions)
 		Since:      strconv.FormatInt(opts.Since, 10),
 		Until:      until,
 	}
-	err = s.attachLogs(ctx, con, logOpts, stopChannel, printSuccessResp)
+	printSuccessResp()
+	err = s.nctlContainerSvc.Logs(ctx, cid, logOpts)
 	if err != nil {
 		s.logger.Debugf("failed to retrieve logs for the container: %s", cid)
 		return err
